@@ -1,0 +1,123 @@
+name: "CI"
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: install
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: install
+
+    steps:
+      - name: Set swap space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 8
+
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          SDK_GATED_TEST_PK: ${{secrets.SDK_GATED_TEST_PK}}
+          SDK_GATED_TEST_PROFILE_ID: ${{secrets.SDK_GATED_TEST_PROFILE_ID}}
+          SDK_GATED_TEST_PUBLICATION_ID: ${{secrets.SDK_GATED_TEST_PUBLICATION_ID}}
+          TESTING_ENV_URL: ${{secrets.TESTING_ENV_URL}}
+          TESTING_HEADER_KEY: ${{secrets.TESTING_HEADER_KEY}}
+          TESTING_HEADER_VALUE: ${{secrets.TESTING_HEADER_VALUE}}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [install, lint, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+  examples:
+    name: Verify Examples
+    runs-on: ubuntu-latest
+    needs: [install, lint, test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint:examples
